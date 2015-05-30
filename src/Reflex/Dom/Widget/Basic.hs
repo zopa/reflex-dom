@@ -443,7 +443,10 @@ list :: (MonadWidget t m, Ord k) => Dynamic t (Map k v) -> (Dynamic t v -> m a) 
 list dm mkChild = listWithKey dm (\_ dv -> mkChild dv)
 
 simpleList :: MonadWidget t m => Dynamic t [v] -> (Dynamic t v -> m a) -> m (Dynamic t [a])
-simpleList xs mkChild = mapDyn (map snd . Map.toList) =<< flip list mkChild =<< mapDyn (Map.fromList . zip [(1::Int)..]) xs
+simpleList xs mkChild = mapDyn Map.elems =<< flip list mkChild =<< mapDyn (Map.fromDistinctAscList . zip [(1::Int)..]) xs
+
+listF :: (Foldable f, MonadWidget t m) => Dynamic t (f v) -> (Dynamic t v -> m a) -> m (Dynamic t (Map Int v))
+listF df mkChild = mapDyn (Map.fromDistinctAscList . zip [1..] . toList) df >>= flip list mkChild
 
 elDynHtml' :: MonadWidget t m => String -> Dynamic t String -> m (El t)
 elDynHtml' elementTag html = do
