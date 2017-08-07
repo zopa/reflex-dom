@@ -2,6 +2,7 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE BangPatterns #-}
 import Control.Concurrent
+import Control.Exception (mask_)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Int
@@ -36,9 +37,12 @@ main = do
   withSystemTempDirectory "reflex-dom-core_test_gc" $ \tmp -> do
     browserProcess <- spawnCommand $ "xvfb-run -a chromium --disable-gpu --user-data-dir=" ++ tmp ++ " http://localhost:3911"
     let finishTest result = mask_ $ do
+          thisThread <- myThreadId
           interruptProcessGroupOf browserProcess
+          putStrLn $ "finishTest by thread: " <> show thisThread
+          putStrLn $ "Main thread is: " <> show mainThread
           throwTo mainThread result
-    forkIO $ watchProcess browserProcess (15 * 10^6) (Just "FAILED: browser process exited")
+    forkIO $ watchProcess browserProcess (15 * 10^6) finishTest (Just "FAILED: browser process exited")
     run 3911 $ do
       -- enableLogging True
       liftIO $ putStrLn "Running..."
@@ -82,4 +86,4 @@ watchProcess process interval onExit chatter = do
   status <- getProcessExitCode process
   case status of
     Nothing -> threadDelay interval >> watchProcess process interval onExit
-    Just ec -> maybe (return ()) putStrnLn msg >> onExit ec
+    Just ec -> maybe (return ()) putStrLn msg >> onExit ec
