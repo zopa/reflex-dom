@@ -35,9 +35,10 @@ main = do
   mainThread <- myThreadId
   withSystemTempDirectory "reflex-dom-core_test_gc" $ \tmp -> do
     browserProcess <- spawnCommand $ "xvfb-run -a chromium --disable-gpu --user-data-dir=" ++ tmp ++ " http://localhost:3911"
-    let finishTest result = do
+    let finishTest result = mask_ $ do
           interruptProcessGroupOf browserProcess
           throwTo mainThread result
+    forkIO $ watchProcess browserProcess (15 * 10^6) (Just "FAILED: browser process exited")
     run 3911 $ do
       -- enableLogging True
       liftIO $ putStrLn "Running..."
@@ -75,3 +76,10 @@ main = do
         _ <- widgetHold w $ w <$ redraw
         return ()
       liftIO $ forever $ threadDelay 1000000000
+
+watchProcess :: ProcessHandle -> Int -> (ExitCode -> IO ()) -> Maybe String -> IO ()
+watchProcess process interval onExit chatter = do
+  status <- getProcessExitCode process
+  case status of
+    Nothing -> threadDelay interval >> watchProcess process interval onExit
+    Just ec -> maybe (return ()) putStrnLn msg >> onExit ec
