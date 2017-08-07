@@ -39,8 +39,8 @@ main = do
     let finishTest result = mask_ $ do
           thisThread <- myThreadId
           interruptProcessGroupOf browserProcess
-          putStrLn $ "finishTest by thread: " <> show thisThread
-          putStrLn $ "Main thread is: " <> show mainThread
+          putStrLn $ "finishTest by thread: " ++ show thisThread
+          putStrLn $ "Main thread is: " ++ show mainThread
           throwTo mainThread result
     forkIO $ watchProcess browserProcess (15 * 10^6) finishTest (Just "FAILED: browser process exited")
     run 3911 $ do
@@ -85,5 +85,5 @@ watchProcess :: ProcessHandle -> Int -> (ExitCode -> IO ()) -> Maybe String -> I
 watchProcess process interval onExit chatter = do
   status <- getProcessExitCode process
   case status of
-    Nothing -> threadDelay interval >> watchProcess process interval onExit
-    Just ec -> maybe (return ()) putStrLn msg >> onExit ec
+    Nothing -> threadDelay interval >> watchProcess process interval onExit chatter
+    Just ec -> maybe (return ()) putStrLn chatter >> onExit ec
